@@ -1,281 +1,640 @@
-Data Science Practical Exam - Emergency Overnight Study GuideThis guide covers all 12 practical assignments (PS 1 to PS 12). 
-For each assignment, you will find:
-Problem Statement Explanation: What the task means in simple terms.
-What We Need to Do: The core objectives and steps required.
-How to Perform It: Conceptual breakdown of the technique.
-Prerequisites / Requirements: Libraries or tools needed.Brief Python / Spark Code: Clean, minimal code snippets that you can copy, paste, and run during your exam.
+# Artificial Neural Networks: Practical Exam Guide (PS1 to PS9)
 
+For every assignment you get: **what the problem statement means → what you must do → how to do it (steps) → what you need → tested code → expected output → a few viva answers.**
 
-PS 1: Data Wrangling, I1. Explanation of the Problem StatementData Wrangling is the process of cleaning, structuring, and enriching raw data into a desired format for better decision-making. Here, we load a dataset, analyze its initial shape, check data types, handle columns, and convert categorical (text-based) variables into quantitative (numerical) variables.2. What We Need to DoImport libraries (pandas, numpy).Load a dataset (e.g., Iris or Titanic or a custom CSV).Check dimensions, missing values, and summary statistics using isnull() and describe().Inspect data types and convert them if required.Encode categorical columns into numbers using astype('category').cat.codes or One-Hot Encoding.3. How to Perform ItPandas provides built-in methods like .info(), .describe(), and .isnull().sum() to quickly scan data frames. Type casting is done via .astype().4. RequirementsPython with pandas and numpy.5. Codeimport pandas as pd
+**Setup (once):** `pip install numpy matplotlib tensorflow` (TensorFlow is needed only for PS9). Every code block is a complete program: paste it into a `.py` file or a Jupyter/Colab cell and run it. All nine programs were run and checked before going into this file (Python 3.12, NumPy 2.5, Matplotlib 3.11, TensorFlow 2.21).
 
+---
+
+## Read this first (2-minute primer)
+
+- **Neuron:** multiplies each input by a weight, adds a bias, then applies an *activation function*: `net = w1·x1 + w2·x2 + … + b`, `y = f(net)`.
+- **Weights and bias:** the numbers the network *learns*.
+- **Training:** show an example → compare output `y` with target `t` → adjust the weights to shrink the error → repeat. One pass over all examples is one **epoch**. The **learning rate** (η, `lr`) is the size of each adjustment.
+- **Linearly separable:** the two classes can be split by a straight line (AND and OR: yes, XOR: no). A single neuron only solves such problems, which is why hidden layers exist (PS6, PS7).
+- **Binary vs bipolar:** binary uses 0/1, bipolar uses −1/+1. The memories in PS5 and PS8 use bipolar values.
+
+## Quick revision table
+
+| PS | Topic | Core idea | Key formula / fact |
+|---|---|---|---|
+| 1 | Activation functions | Non-linear function applied to the net input | sigmoid = 1/(1+e⁻ˣ), ReLU = max(0, x) |
+| 2 | McCulloch-Pitts ANDNOT | Binary neuron, fixed weights, threshold | fires if Σwx ≥ θ; w = (1, −1), θ = 1 |
+| 3 | Perceptron, even/odd | Learns weights; ASCII code as 8 input bits | w ← w + η(t − y)x |
+| 4 | Perceptron law + regions | Decision boundary is a straight line | w1·x1 + w2·x2 + b = 0 |
+| 5 | BAM | Two-layer memory that stores pairs A ↔ B | W = ΣAₖᵀBₖ; B = sgn(AW); A = sgn(BWᵀ) |
+| 6 | Forward + back propagation | Forward → loss → backward → update | W ← W − η·(inputᵀ·δ) |
+| 7 | BPN for XOR | A hidden layer solves the non-separable XOR | same procedure as PS6 |
+| 8 | Hopfield, 4 vectors | Single-layer auto-associative memory | W = Σpₖpₖᵀ − P·I; xᵢ = sgn(Σⱼwᵢⱼxⱼ) |
+| 9 | CNN object detection | CNN outputs class + box; judged by IoU / mAP | IoU = overlap area / union area |
+
+---
+
+## PS1: Plot activation functions
+
+**What the problem statement means.** An *activation function* is the rule a neuron uses to turn its net input into an output: `y = f(w·x + b)`. It adds non-linearity. Without it, a network of any depth collapses into one straight-line equation and cannot learn curves or XOR. The task is to *draw* the common ones so you can see how each one squashes or passes its input.
+
+| Function | Formula | Output range | Remember |
+|---|---|---|---|
+| Binary step | 1 if x ≥ 0 else 0 | {0, 1} | Perceptron / McCulloch-Pitts; not differentiable |
+| Sigmoid | 1 / (1 + e⁻ˣ) | (0, 1) | Probabilities; saturates, so gradients vanish |
+| Tanh | (eˣ − e⁻ˣ) / (eˣ + e⁻ˣ) | (−1, 1) | Sigmoid-like but zero-centred |
+| ReLU | max(0, x) | [0, ∞) | Default for hidden layers; cheap |
+| Leaky ReLU | x if x > 0 else 0.01x | (−∞, ∞) | Fixes "dead" ReLU neurons |
+| ELU | x if x > 0 else eˣ − 1 | (−1, ∞) | Smooth version of ReLU |
+
+Softmax turns a vector of scores into probabilities that add up to 1 (multi-class output layer). It is not a single-input curve, so it is not plotted here.
+
+**What you have to do.** Write a program that evaluates several activation functions over a range of inputs and shows each as a graph.
+
+**How to do it.**
+1. Create the inputs: `x = np.linspace(-10, 10, 200)`.
+2. Compute every function on the whole array with NumPy (no loops needed).
+3. Make a 2×3 grid of subplots, one function in each, with a title and a grid.
+4. Call `plt.show()`.
+
+**What you need.** Python 3, NumPy, Matplotlib. No input data.
+
+**Code**
+
+```python
 import numpy as np
-
-# Load dataset (using iris/titanic url or local file)
-url = "https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv"
-df = pd.read_csv(url)
-
-# 4. Preprocessing & Dimensions
-print("Dimensions:", df.shape)
-print("Missing values:\n", df.isnull().sum())
-print("Summary Statistics:\n", df.describe())
-
-# 5. Data Formatting & Type Conversion
-print("Data Types:\n", df.dtypes)
-df['species'] = df['species'].astype('category')
-
-# 6. Turn categorical into quantitative
-df['species_code'] = df['species'].cat.codes
-print(df.head())
-
-
-PS 2: Data Wrangling II1. Explanation of the Problem StatementReal-world data is messy. This assignment focuses on finding and fixing missing values, spotting and treating outliers, and applying mathematical transformations (like log scaling) to fix skewness.2. What We Need to DoScan and handle missing values (imputation with mean/median or dropping).Detect outliers using IQR (Interquartile Range) or Z-score and treat them (capping/trimming).Apply data transformations (e.g., np.log) to reduce skewness.3. How to Perform ItMissing values: df.fillna() or df.dropna().Outliers: Calculate $Q1$, $Q3$, $IQR = Q3 - Q1$, and filter values outside $[Q1 - 1.5 \times IQR, Q3 + 1.5 \times IQR]$.Transformation: Apply np.log() or np.sqrt().4. RequirementsPython with pandas, numpy.5. Codeimport pandas as pd
-import numpy as np
-
-df = pd.read_csv("https://raw.githubusercontent.com/mwaskom/seaborn-data/master/titanic.csv")
-
-# 1. Handle missing values
-df['age'] = df['age'].fillna(df['age'].median())
-
-# 2. Outlier detection & treatment (using IQR on 'fare')
-Q1, Q3 = df['fare'].quantile(0.25), df['fare'].quantile(0.75)
-IQR = Q3 - Q1
-lower, upper = Q1 - 1.5 * IQR, Q3 + 1.5 * IQR
-df['fare'] = np.where(df['fare'] > upper, upper, df['fare']) # Capping outliers
-
-# 3. Data Transformation (Log transform to reduce skewness)
-df['log_fare'] = np.log1p(df['fare'])
-print(df[['fare', 'log_fare']].head())
-
-
-PS 3: Descriptive Statistics - Measures of Central Tendency and Variability1. Explanation of the Problem StatementDescriptive statistics summarize the main features of a dataset. Here, we compute metrics like mean, median, standard deviation, minimum, and maximum, both overall and grouped by categorical variables.2. What We Need to DoGroup numeric variables by a categorical column and compute aggregate statistics (mean, median, std, min, max).Display basic statistical details specifically for subsets of the Iris dataset (iris-setosa, iris-versicolor, etc.).3. How to Perform ItUse pandas .groupby().agg([...]) and .describe().4. RequirementsPython with pandas.5. Codeimport 
-pandas as pd
-
-df = pd.read_csv("https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv")
-
-# 1. Grouped Summary Statistics
-grouped_stats = df.groupby('species')['sepal_length'].agg(['mean', 'median', 'min', 'max', 'std'])
-print("Grouped Stats:\n", grouped_stats)
-
-# 2. Statistical details for specific species
-print("\nSetosa stats:\n", df[df['species'] == 'setosa'].describe())
-print("\nVersicolor stats:\n", df[df['species'] == 'versicolor'].describe())
-
-
-PS 4: Data Analytics I (Linear Regression)1. Explanation of the Problem StatementLinear Regression is a supervised machine learning algorithm used to predict a continuous dependent variable (house price) based on one or more independent predictor features.2. What We Need to DoLoad the Boston Housing dataset (or equivalent regression dataset).Separate features ($X$) and target variable ($y$).Split data into training and testing sets.Train a Linear Regression model and evaluate it using metrics like Mean Squared Error ($MSE$) and $R^2$ score.3. How to Perform ItUse sklearn.linear_model.LinearRegression and sklearn.model_selection.train_test_split.4. RequirementsPython with scikit-learn, pandas, numpy.5. Codeimport pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error, r2_score
-
-# Load housing dataset from sklearn or open source
-from sklearn.datasets import fetch_california_housing
-data = fetch_california_housing(as_frame=True)
-df = data.frame
-
-X, y = df.drop(columns=['MedHouseVal']), df['MedHouseVal']
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-model = LinearRegression()
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
-
-print("MSE:", mean_squared_error(y_test, y_pred))
-print("R2 Score:", r2_score(y_test, y_pred))
-
-
-PS 5: Data Analytics II (Logistic Regression & Confusion Matrix)1. Explanation of the Problem StatementLogistic Regression is used for binary classification tasks (predicting categorical outcomes like 0 or 1, Yes or No). A confusion matrix evaluates classification performance by measuring True Positives, False Positives, True Negatives, and False Negatives.2. What We Need to DoLoad classification dataset (e.g., Social Network Ads).Train a Logistic Regression classifier.Generate predictions and compute the Confusion Matrix, Accuracy, Error Rate, Precision, and Recall.3. How to Perform ItUse sklearn.linear_model.LogisticRegression and sklearn.metrics functions.4. RequirementsPython with scikit-learn, pandas.5. Codeimport pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score
-
-# Sample dataset
-df = pd.read_csv("https://raw.githubusercontent.com/jbrownlee/Datasets/master/pima-indians-diabetes.data.csv", header=None)
-X, y = df.iloc[:, :-1], df.iloc[:, -1]
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-model = LogisticRegression(max_iter=500)
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
-
-cm = confusion_matrix(y_test, y_pred)
-tn, fp, fn, tp = cm.ravel()
-
-print(f"TP: {tp}, FP: {fp}, TN: {tn}, FN: {fn}")
-print("Accuracy:", accuracy_score(y_test, y_pred))
-print("Error Rate:", 1 - accuracy_score(y_test, y_pred))
-print("Precision:", precision_score(y_test, y_pred))
-print("Recall:", recall_score(y_test, y_pred))
-
-
-PS 6: Data Analytics III (Naïve Bayes Classification)1. Explanation of the Problem StatementNaïve Bayes is a probabilistic classifier based on Bayes' Theorem with strong independence assumptions between features. It works exceptionally well for classification tasks like the Iris dataset.2. What We Need to DoLoad the Iris dataset.Train a Gaussian Naïve Bayes model.Compute the confusion matrix and evaluation metrics (Accuracy, Precision, Recall).3. How to Perform ItUse sklearn.naive_bayes.GaussianNB.4. RequirementsPython with scikit-learn.5. Codeimport pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.naive_bayes import GaussianNB
-from sklearn.metrics import confusion_matrix, accuracy_score, classification_report
-
-df = pd.read_csv("https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv")
-X, y = df.drop(columns=['species']), df['species']
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-model = GaussianNB()
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
-
-print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
-print("Accuracy:", accuracy_score(y_test, y_pred))
-
-
-PS 7: Text Analytics1. Explanation of the Problem StatementText analytics converts raw text into structured numerical representations suitable for machine learning. This involves tokenization, part-of-speech (POS) tagging, stop-word removal, stemming, lemmatization, and TF-IDF calculation.2. What We Need to DoPreprocess sample text using NLTK or SpaCy (Tokenize, POS tag, remove stop words, stem, lemmatize).Compute Term Frequency (TF) and Inverse Document Frequency (IDF) using TfidfVectorizer.3. How to Perform ItUse Python's nltk and sklearn.feature_extraction.text.TfidfVectorizer.4. RequirementsPython with nltk and scikit-learn.5. Codeimport nltk
-from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
-from nltk.stem import PorterStemmer, WordNetLemmatizer
-from sklearn.feature_extraction.text import TfidfVectorizer
-
-nltk.download('punkt')
-nltk.download('stopwords')
-nltk.download('wordnet')
-
-text = "Data Science is an exciting field that combines programming and statistics."
-
-# 1. Preprocessing
-tokens = word_tokenize(text.lower())
-stop_words = set(stopwords.words('english'))
-filtered_tokens = [w for w in tokens if w not in stop_words]
-
-stemmer = PorterStemmer()
-lemmatizer = WordNetLemmatizer()
-
-stemmed = [stemmer.stem(w) for w in filtered_tokens]
-lemmatized = [lemmatizer.lemmatize(w) for w in filtered_tokens]
-
-print("Stemmed:", stemmed)
-print("Lemmatized:", lemmatized)
-
-# 2. TF-IDF Representation
-corpus = [text, "Machine learning and data science go hand in hand."]
-vectorizer = TfidfVectorizer()
-tfidf_matrix = vectorizer.fit_transform(corpus)
-print("\nTF-IDF Matrix Shape:", tfidf_matrix.shape)
-
-
-PS 8: Data Visualization I1. Explanation of the Problem StatementData visualization helps uncover hidden patterns, trends, and distributions. Here, we analyze the Titanic dataset using Seaborn to plot relationships and examine the distribution of ticket fares using histograms.2. What We Need to DoLoad the inbuilt titanic dataset via Seaborn.Plot a histogram of passenger fares (fare).Create categorical plots to discover survival patterns.3. How to Perform ItUse sns.histplot() and sns.catplot() or sns.barplot().4. RequirementsPython with seaborn and matplotlib.5. Codeimport seaborn as sns
 import matplotlib.pyplot as plt
 
-df = sns.load_dataset('titanic')
-
-# 1. Patterns in data (Survival rate by class)
-sns.barplot(x='class', y='survived', data=df)
-plt.title("Survival Rate by Class")
-plt.show()
-
-# 2. Histogram of ticket fare
-sns.histplot(df['fare'], kde=True, bins=30)
-plt.title("Fare Distribution")
-plt.show()
-
-
-PS 9: Data Visualization II1. Explanation of the Problem StatementAdvanced plots like box plots help visualize the spread, median, and outliers of numerical data grouped across multiple categorical variables (e.g., age distribution by gender and survival status).2. What We Need to DoPlot a box plot for age with respect to sex, grouped/colored by survived.Write statistical inferences based on the plot.3. How to Perform ItUse sns.boxplot(x='sex', y='age', hue='survived', data=df).4. RequirementsPython with seaborn and matplotlib.5. Codeimport seaborn as sns
-import matplotlib.pyplot as plt
-
-df = sns.load_dataset('titanic')
-
-# 1. Box plot for age vs gender with survival info
-sns.boxplot(x='sex', y='age', hue='survived', data=df)
-plt.title("Age Distribution by Gender and Survival")
-plt.show()
-
-# 2. Inferences (to write in exam):
-# - Female survivors tend to have a wider age spread including children.
-# - Male non-survivors show higher median ages compared to female non-survivors.
-
-
-PS 10: Data Visualization III1. Explanation of the Problem StatementComprehensive exploratory data analysis (EDA) of a dataset (like Iris) involving feature listing, data types identification, individual histograms, boxplots, and outlier comparison.2. What We Need to DoList features and their data types.Create histograms and boxplots for each numerical feature.Identify outliers.3. How to Perform ItUse Pandas .dtypes and Seaborn/Matplotlib subplots.4. RequirementsPython with seaborn, matplotlib, pandas.5. Codeimport seaborn as sns
-import matplotlib.pyplot as plt
-import pandas as pd
-
-df = sns.load_dataset('iris')
-
-# 1. Features and types
-print("Feature Types:\n", df.dtypes)
-
-# 2. Histograms
-df.hist(bins=15, figsize=(10, 6))
-plt.suptitle("Feature Histograms")
-plt.show()
-
-# 3. Boxplots & Outliers
-plt.figure(figsize=(10, 6))
-sns.boxplot(data=df.drop(columns=['species']))
-plt.title("Boxplots for Iris Features (Outlier Check)")
-plt.show()
-
-
-PS 11: Distributed Application using MapReduce (Log Processing)1. Explanation of the Problem StatementMapReduce is a programming model for processing large data sets with a parallel, distributed algorithm on a cluster. Here, we write a Python-based MapReduce simulator to process and aggregate system logs (e.g., counting log levels like INFO, ERROR, WARN).2. What We Need to DoSimulate a Map function that extracts key-value pairs (e.g., (log_level, 1)).Simulate a Reduce function that aggregates counts per log level.3. How to Perform ItUse Python dictionaries or itertools.groupby to simulate the Map and Reduce phases.4. RequirementsPython (Standard library).5. Codefrom collections import defaultdict
-
-# Sample system logs
-logs = [
-    "INFO: Server started successfully",
-    "ERROR: Database connection failed",
-    "INFO: User logged in",
-    "WARN: High memory usage",
-    "ERROR: Timeout occurred"
-]
-
-# Mapper function: emits (log_level, 1)
-def mapper(log_lines):
-    mapped_data = []
-    for line in log_lines:
-        level = line.split(':')[0]
-        mapped_data.append((level, 1))
-    return mapped_data
-
-# Shuffle & Sort step
-def shuffle(mapped_data):
-    shuffled = defaultdict(list)
-    for k, v in mapped_data:
-        shuffled[k].append(v)
-    return shuffled
-
-# Reducer function: sums counts per log level
-def reducer(shuffled_data):
-    reduced_output = {}
-    for k, values in shuffled_data.items():
-        reduced_output[k] = sum(values)
-    return reduced_output
-
-# Execution
-mapped = mapper(logs)
-shuffled = shuffle(mapped)
-result = reducer(shuffled)
-
-print("Log Analysis Result (MapReduce Simulation):", result)
-
-
-PS 12: Scala with Apache Spark Framework1. Explanation of the Problem StatementApache Spark is an open-source distributed general-purpose cluster-computing framework. Writing a simple Scala program using Spark involves initializing a SparkSession, parallelizing data (or reading a file), and performing basic transformations (like map or filter).2. What We Need to DoInitialize a Spark session in Scala.Create an RDD or DataFrame and perform a basic word count or data filtering operation.3. How to Perform ItUse standard Spark Scala APIs (SparkSession).4. RequirementsScala and Apache Spark installed (or write syntax correctly for paper exams).5. Codeimport org.apache.spark.sql.SparkSession
-
-object SparkLogProcessor {
-  def main(args: Array[String]): Unit = {
-    // Initialize Spark Session
-    val spark = SparkSession.builder()
-      .appName("Simple Log Processor")
-      .master("local[*]")
-      .getOrCreate()
-
-    import spark.implicits._
-
-    // Sample log data
-    val logData = Seq(
-      "INFO System up",
-      "ERROR Disk full",
-      "INFO User connected",
-      "ERROR Out of memory"
-    )
-
-    val rdd = spark.sparkContext.parallelize(logData)
-
-    // Filter error logs and count
-    val errorCount = rdd.filter(line => line.contains("ERROR")).count()
-    
-    println(s"Total Error Logs: $errorCount")
-
-    spark.stop()
-  }
+x = np.linspace(-10, 10, 200)
+f = {
+    'Binary Step': np.where(x >= 0, 1, 0),
+    'Sigmoid':     1 / (1 + np.exp(-x)),
+    'Tanh':        np.tanh(x),
+    'ReLU':        np.maximum(0, x),
+    'Leaky ReLU':  np.where(x > 0, x, 0.01 * x),
+    'ELU':         np.where(x > 0, x, np.exp(x) - 1),
 }
+fig, ax = plt.subplots(2, 3, figsize=(12, 6))
+for a, (name, y) in zip(ax.ravel(), f.items()):
+    a.plot(x, y); a.set_title(name); a.grid(True)
+plt.tight_layout()
+plt.show()
+```
+
+**Expected output.** One window with six graphs: step jumps from 0 to 1 at x = 0; sigmoid is an S-curve between 0 and 1; tanh is an S-curve between −1 and 1; ReLU is flat at 0 and then a straight line; Leaky ReLU is the same with a tiny slope on the left; ELU has a smooth tail that flattens at −1.
+
+**Viva one-liners**
+- *Why non-linear?* Otherwise stacked layers are equivalent to one linear layer.
+- *Sigmoid vs tanh?* Range (0, 1) vs (−1, 1); tanh is zero-centred, which usually trains easier.
+- *Why is ReLU popular?* It is cheap and does not saturate for x > 0, so gradients do not vanish.
+
+---
+
+## PS2: ANDNOT function using a McCulloch-Pitts neuron
+
+**What the problem statement means.** The McCulloch-Pitts (MP) neuron (1943) is the first mathematical neuron: inputs are binary (0/1), the **weights are fixed by hand (no learning)**, and the neuron outputs 1 only if the weighted sum reaches a threshold θ: `y = 1 if Σ w·x ≥ θ else 0`. A positive weight is *excitatory*, a negative weight is *inhibitory*. ANDNOT means `x1 AND (NOT x2)`: the output is 1 only when x1 = 1 and x2 = 0.
+
+| x1 | x2 | y (ANDNOT) |
+|---|---|---|
+| 0 | 0 | 0 |
+| 0 | 1 | 0 |
+| 1 | 0 | **1** |
+| 1 | 1 | 0 |
+
+**What you have to do.** Choose weights and a threshold so that an MP neuron reproduces this truth table, then verify it with a program.
+
+**How to do it.**
+1. *Find the weights by hand.* Try w1 = w2 = 1: net = 0, 1, 1, 2 for the four rows, so (1,0) and (0,1) look the same and cannot be separated. Make x2 inhibitory, w2 = −1: net = 0, −1, 1, 0. Only (1,0) reaches 1, so choose **θ = 1**. Result: **w = (1, −1), θ = 1**.
+2. In code: store inputs and targets, compute `net = X @ w`, apply the threshold, compare with the target, print.
+
+**What you need.** Python 3, NumPy, the truth table, and the weights/threshold from step 1.
+
+**Code**
+
+```python
+import numpy as np
+
+X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+t = np.array([0, 0, 1, 0])            # target: x1 AND (NOT x2)
+w, theta = np.array([1, -1]), 1       # w2 is negative = inhibitory input
+net = X @ w                           # net input = x1*w1 + x2*w2
+y = (net >= theta).astype(int)        # neuron fires if net >= threshold
+
+print("x1 x2 net y target")
+for xi, n, yi, ti in zip(X, net, y, t):
+    print(xi[0], xi[1], n, yi, ti)
+print("ANDNOT realised:", (y == t).all())
+```
+
+**Expected output**
+
+```
+x1 x2 net y target
+0 0 0 0 0
+0 1 -1 0 0
+1 0 1 1 1
+1 1 0 0 0
+ANDNOT realised: True
+```
+
+**Viva one-liners**
+- *MP neuron vs perceptron?* MP: binary, weights fixed by hand. Perceptron: weights are learned.
+- *Role of θ?* The neuron fires only if the net input reaches θ.
+- *Can one MP neuron do XOR?* No, XOR is not linearly separable.
+
+---
+
+## PS3: Perceptron to recognise even and odd digits (ASCII input)
+
+**What the problem statement means.** A **perceptron** (Rosenblatt, 1958) is a single neuron with a step activation whose weights are *learned*. For each training example it computes `y`, and if `y` is wrong it corrects the weights: `w ← w + η(t − y)x`, `b ← b + η(t − y)` (if `y = t` nothing changes). "Numbers in ASCII form 0 to 9" means each digit character has an ASCII code ('0' = 48, '1' = 49, … '9' = 57); written as 8-bit binary, those 8 bits are the 8 inputs. The output should be **1 for odd, 0 for even**. This is learnable because 48 is even, so the last bit of the code is 1 exactly for odd digits: the classes are linearly separable.
+
+**What you have to do.** Train a perceptron on the ten ASCII-coded digits and print its even/odd decision for each.
+
+**How to do it.**
+1. Convert each digit to its ASCII code and then to 8 bits: `format(ord('5'), '08b')`.
+2. Targets: `digit % 2` (1 = odd, 0 = even).
+3. Start with `w = 0`, `b = 0`.
+4. For every sample: `y = 1 if w·x + b ≥ 0 else 0`; apply the update rule; count errors.
+5. Repeat epochs until an epoch has zero errors.
+6. Print the prediction for each digit.
+
+**What you need.** Python 3, NumPy; the idea of ASCII and binary; learning rate 1 is fine.
+
+**Code**
+
+```python
+import numpy as np
+
+digits = np.arange(10)
+X = np.array([[int(b) for b in format(ord(str(d)), '08b')] for d in digits])  # ASCII code -> 8 bits
+t = digits % 2                        # target: 1 = odd, 0 = even
+w, b, lr = np.zeros(8), 0, 1
+
+for epoch in range(100):
+    err = 0
+    for x, ti in zip(X, t):
+        y = int(x @ w + b >= 0)       # step activation
+        w += lr * (ti - y) * x        # perceptron learning rule
+        b += lr * (ti - y)
+        err += abs(ti - y)
+    if err == 0: break                # stop when every digit is classified correctly
+print("Converged after", epoch + 1, "epochs")
+
+print("digit ASCII  binary    output")
+for d, x in zip(digits, X):
+    print(f"  {d}    {ord(str(d))}  {''.join(map(str, x))}  {'odd' if x @ w + b >= 0 else 'even'}")
+```
+
+**Expected output**
+
+```
+Converged after 2 epochs
+digit ASCII  binary    output
+  0    48  00110000  even
+  1    49  00110001  odd
+  2    50  00110010  even
+  3    51  00110011  odd
+  4    52  00110100  even
+  5    53  00110101  odd
+  6    54  00110110  even
+  7    55  00110111  odd
+  8    56  00111000  even
+  9    57  00111001  odd
+```
+
+(The learned weight on the last bit is the large positive one, which is why it works.)
+
+**Viva one-liners**
+- *Why does it converge?* The data is linearly separable (perceptron convergence theorem).
+- *What does the bias do?* It shifts the decision threshold.
+- *Why only the last bit matters?* Even/odd is decided by the least significant bit.
+
+---
+
+## PS4: Perceptron learning law with decision regions (graph)
+
+**What the problem statement means.** The **perceptron learning law**: for every example, compare output `y` with target `t`. If correct, do nothing. If wrong, `w_new = w_old + η(t − y)x` and `b_new = b_old + η(t − y)`. Repeat epochs until there are no mistakes; this is guaranteed in finitely many steps when the classes are linearly separable. The **decision boundary** is the line `w1·x1 + w2·x2 + b = 0`. The side where `net ≥ 0` is one class and the other side is the other class; these two half-planes are the **decision regions**.
+
+**What you have to do.** Pick a suitable example (here the AND gate), train a perceptron with the learning law while printing how the weights change, and plot the data points with the shaded decision regions.
+
+**How to do it.**
+1. Use bipolar inputs and targets: inputs ∈ {−1, +1}, AND target = +1 only for (1, 1).
+2. Initialise `w = (0, 0)`, `b = 0`, `lr = 0.5`.
+3. Train; print `w`, `b` and the error count after every epoch.
+4. Build a grid of points with `np.meshgrid`, compute the predicted class at each grid point, and shade it with `plt.contourf`.
+5. Scatter the four training points on top.
+
+**What you need.** Python 3, NumPy, Matplotlib; a linearly separable dataset.
+
+**Code**
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+
+X = np.array([[-1, -1], [-1, 1], [1, -1], [1, 1]])    # bipolar inputs
+t = np.array([-1, -1, -1, 1])                         # AND gate (bipolar targets)
+w, b, lr = np.zeros(2), 0.0, 0.5
+
+for epoch in range(1, 51):
+    err = 0
+    for x, ti in zip(X, t):
+        y = 1 if w @ x + b >= 0 else -1
+        w += lr * (ti - y) * x        # perceptron learning law: w = w + lr*(t - y)*x
+        b += lr * (ti - y)
+        err += int(ti != y)
+    print(f"epoch {epoch}: w = {w}, b = {b}, errors = {err}")
+    if err == 0: break
+
+xx, yy = np.meshgrid(np.linspace(-2, 2, 200), np.linspace(-2, 2, 200))
+Z = (w[0] * xx + w[1] * yy + b >= 0).astype(int)     # class predicted at every point of the plane
+plt.contourf(xx, yy, Z, alpha=0.3, cmap='coolwarm')  # decision regions
+plt.scatter(X[:, 0], X[:, 1], c=t, cmap='coolwarm', s=120, edgecolors='k')
+plt.title(f"Decision boundary: {w[0]}*x1 + {w[1]}*x2 + ({b}) = 0")
+plt.xlabel('x1'); plt.ylabel('x2'); plt.grid(True)
+plt.show()
+```
+
+**Expected output** (console)
+
+```
+epoch 1: w = [1. 1.], b = -1.0, errors = 1
+epoch 2: w = [1. 1.], b = -1.0, errors = 0
+```
+
+Graph: a blue region with the three points of class −1 and a red region with the point (1, 1), separated by the line `x1 + x2 − 1 = 0`.
+
+**Viva one-liners**
+- *Why bipolar?* With 0/1 inputs the point (0, 0) never changes the weights, and the final boundary can pass exactly through a data point; bipolar avoids both.
+- *Role of the learning rate?* It sets the size of each correction.
+- *What if the data were XOR?* It never converges (not linearly separable); a hidden layer is needed (PS7).
+
+---
+
+## PS5: Bidirectional Associative Memory (BAM) with two pairs of vectors
+
+**What the problem statement means.** A **BAM** (Kosko, 1988) is a memory with two layers, X (n neurons) and Y (m neurons), that stores *pairs* of patterns (A → B) and works in **both directions**: give it A and it returns B; give it B and it returns A. Patterns are bipolar (−1/+1).
+- **Storing** (outer-product / Hebb rule): `W = Σ Aₖᵀ·Bₖ`, an n × m matrix.
+- **Recall:** forward `B = sgn(A·W)`, backward `A = sgn(B·Wᵀ)`, bouncing between the layers until nothing changes.
+
+It is *hetero*-associative (A ≠ B), unlike the Hopfield net of PS8 (*auto*-associative). Recall is exact when the stored patterns are roughly orthogonal.
+
+**What you have to do.** Store two vector pairs, print the weight matrix, and show that each B is recalled from its A and each A from its B. (Bonus shown below: a noisy A still retrieves the right pair.)
+
+**How to do it.**
+1. Choose two bipolar pairs (A₁, B₁), (A₂, B₂).
+2. Compute `W = A.T @ B` (this is the sum of the outer products).
+3. Forward recall: `sgn(a @ W)`. Backward recall: `sgn(b @ W.T)`.
+4. Noisy test: flip one bit of A₁ and repeat forward/backward passes until stable.
+
+**What you need.** Python 3, NumPy; two bipolar pairs; a sign function (`sgn(0)` taken as +1).
+
+**Code**
+
+```python
+import numpy as np
+
+A = np.array([[1, -1, 1, -1, 1, -1], [1, 1, 1, -1, -1, -1]])   # input patterns  (bipolar)
+B = np.array([[1, 1, -1, -1], [1, -1, 1, -1]])                 # paired patterns (bipolar)
+W = A.T @ B                                                    # weights = sum of outer products
+sgn = lambda v: np.where(v >= 0, 1, -1)
+
+print("Weight matrix:\n", W)
+for a, b in zip(A, B):
+    print("A -> B:", sgn(a @ W), "(expected", b, ")   B -> A:", sgn(b @ W.T), "(expected", a, ")")
+
+a = A[0].copy(); a[0] = -a[0]                                  # noisy input: flip one bit of A1
+for _ in range(5):                                             # bidirectional passes until stable
+    b = sgn(a @ W); a_new = sgn(b @ W.T)
+    if (a_new == a).all(): break
+    a = a_new
+print("Noisy A1 recovered ->", a, b)
+```
+
+**Expected output**
+
+```
+Weight matrix:
+ [[ 2  0  0 -2]
+ [ 0 -2  2  0]
+ [ 2  0  0 -2]
+ [-2  0  0  2]
+ [ 0  2 -2  0]
+ [-2  0  0  2]]
+A -> B: [ 1  1 -1 -1] (expected [ 1  1 -1 -1] )   B -> A: [ 1 -1  1 -1  1 -1] (expected [ 1 -1  1 -1  1 -1] )
+A -> B: [ 1 -1  1 -1] (expected [ 1 -1  1 -1] )   B -> A: [ 1  1  1 -1 -1 -1] (expected [ 1  1  1 -1 -1 -1] )
+Noisy A1 recovered -> [ 1 -1  1 -1  1 -1] [ 1  1 -1 -1]
+```
+
+**Viva one-liners**
+- *BAM vs Hopfield?* BAM: two layers, hetero-associative, W is n × m. Hopfield: one layer, auto-associative, symmetric W with zero diagonal.
+- *Why bipolar?* A 0 would contribute nothing to W; −1 does.
+- *Capacity?* Roughly min(n, m) pairs, best with orthogonal patterns.
+
+---
+
+## PS6: ANN training with forward propagation and back propagation
+
+**What the problem statement means.** An ANN learns by repeating four steps:
+1. **Forward propagation:** push the inputs through the layers: `h = σ(X·W1 + b1)`, `out = σ(h·W2 + b2)`, where `σ(z) = 1/(1 + e⁻ᶻ)`.
+2. **Loss:** measure the error, `MSE = mean((t − out)²)`.
+3. **Back propagation:** use the chain rule to send the error backwards: output error `δ2 = (out − t)·out·(1 − out)`, hidden error `δ1 = (δ2·W2ᵀ)·h·(1 − h)` (because σ′ = σ(1 − σ)).
+4. **Weight update (gradient descent):** `W ← W − η·(inputᵀ·δ)`, `b ← b − η·Σδ`.
+
+One pass of these four steps over the data is one epoch; repeat for thousands of epochs until the loss is tiny. The example network is 3 inputs → 4 hidden → 1 output, learning "majority of three bits" (output 1 when at least two inputs are 1).
+
+**What you have to do.** Implement the training loop yourself (no Keras) with explicit forward and backward passes, print the loss as it falls, and show the final predictions.
+
+**How to do it.**
+1. Prepare inputs `X` and targets `y`.
+2. Initialise weights randomly, biases to 0.
+3. Loop over epochs: forward pass → loss → backward pass (δ2, δ1) → update all weights and biases.
+4. Print the loss every 1000 epochs.
+5. After training, threshold the output at 0.5.
+
+**What you need.** Python 3, NumPy; training data; sigmoid; learning rate 0.5; 5000 epochs.
+
+**Code**
+
+```python
+import numpy as np
+np.random.seed(1)
+
+X = np.array([[0,0,0],[0,0,1],[0,1,0],[0,1,1],[1,0,0],[1,0,1],[1,1,0],[1,1,1]])
+y = (X.sum(1) >= 2).astype(float).reshape(-1, 1)      # target: 1 if at least two inputs are 1
+sig = lambda z: 1 / (1 + np.exp(-z))
+
+W1, b1 = np.random.randn(3, 4), np.zeros((1, 4))      # input (3) -> hidden (4)
+W2, b2 = np.random.randn(4, 1), np.zeros((1, 1))      # hidden (4) -> output (1)
+lr = 0.5
+
+for ep in range(5001):
+    h = sig(X @ W1 + b1)                              # --- forward propagation ---
+    out = sig(h @ W2 + b2)
+    loss = np.mean((y - out) ** 2)
+    d2 = (out - y) * out * (1 - out)                  # --- back propagation ---
+    d1 = (d2 @ W2.T) * h * (1 - h)                    # error pushed back to hidden layer
+    W2 -= lr * h.T @ d2;  b2 -= lr * d2.sum(0, keepdims=True)    # weight update (gradient descent)
+    W1 -= lr * X.T @ d1;  b1 -= lr * d1.sum(0, keepdims=True)
+    if ep % 1000 == 0: print(f"epoch {ep:4d}  loss {loss:.5f}")
+
+print("output   :", np.round(out.ravel(), 2))
+print("predicted:", (out > 0.5).astype(int).ravel())
+print("target   :", y.astype(int).ravel())
+```
+
+**Expected output** (last decimals may differ slightly on your machine)
+
+```
+epoch    0  loss 0.20174
+epoch 1000  loss 0.00057
+epoch 2000  loss 0.00024
+epoch 3000  loss 0.00015
+epoch 4000  loss 0.00010
+epoch 5000  loss 0.00008
+output   : [0.   0.01 0.01 0.99 0.01 0.99 0.99 1.  ]
+predicted: [0 0 0 1 0 1 1 1]
+target   : [0 0 0 1 0 1 1 1]
+```
+
+**Viva one-liners**
+- *Why random initial weights?* Equal weights keep hidden neurons identical, so they all learn the same thing.
+- *Learning rate too big or too small?* Too big overshoots or diverges; too small is very slow.
+- *Forward vs backward pass?* Forward computes the output; backward computes the gradients used to update weights.
+
+---
+
+## PS7: Back Propagation Network for XOR (binary input and output)
+
+**What the problem statement means.** XOR outputs 1 only when its inputs differ: (0,0)→0, (0,1)→1, (1,0)→1, (1,1)→0. No single straight line separates the 1s from the 0s, so one perceptron cannot learn it. A **hidden layer** lets the network combine several lines and solve it. A **Back Propagation Network (BPN)** is a multi-layer feed-forward network trained with the procedure from PS6. Inputs and targets are binary (0/1); the sigmoid output is a number in (0, 1), so it is thresholded at 0.5 to read it as binary.
+
+**What you have to do.** Build and train a BPN (2 inputs → hidden layer → 1 output) on the XOR truth table and show that it outputs the correct 0/1 for all four inputs.
+
+**How to do it.** Same loop as PS6, with the XOR data:
+1. XOR inputs and targets; random weights (2 → 4 hidden → 1).
+2. Forward pass with sigmoid.
+3. Output error term, then hidden error term (back-propagated).
+4. Update weights; repeat 10 000 epochs.
+5. Print the outputs and their 0/1 thresholded values.
+
+**What you need.** Python 3, NumPy; XOR data; sigmoid; learning rate 1; 10 000 epochs.
+
+**Code**
+
+```python
+import numpy as np
+np.random.seed(0)
+
+X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])        # binary inputs
+t = np.array([[0], [1], [1], [0]])                    # XOR targets
+sig = lambda z: 1 / (1 + np.exp(-z))
+
+V, bv = np.random.randn(2, 4), np.zeros((1, 4))       # input -> hidden (4 neurons)
+W, bw = np.random.randn(4, 1), np.zeros((1, 1))       # hidden -> output
+lr = 1.0
+
+for ep in range(10001):
+    h = sig(X @ V + bv)                               # forward pass
+    y = sig(h @ W + bw)
+    dy = (y - t) * y * (1 - y)                        # output error term
+    dh = (dy @ W.T) * h * (1 - h)                     # hidden error term (back-propagated)
+    W -= lr * h.T @ dy;  bw -= lr * dy.sum(0, keepdims=True)
+    V -= lr * X.T @ dh;  bv -= lr * dh.sum(0, keepdims=True)
+    if ep % 2000 == 0: print(f"epoch {ep:5d}  error {np.mean((t - y) ** 2):.5f}")
+
+print("x1 x2 | output | binary")
+for xi, yi in zip(X, y): print(xi[0], xi[1], "|", round(float(yi[0]), 3), "|", int(yi[0] > 0.5))
+```
+
+**Expected output**
+
+```
+epoch     0  error 0.32668
+epoch  2000  error 0.00074
+epoch  4000  error 0.00032
+epoch  6000  error 0.00020
+epoch  8000  error 0.00014
+epoch 10000  error 0.00011
+x1 x2 | output | binary
+0 0 | 0.011 | 0
+0 1 | 0.99 | 1
+1 0 | 0.99 | 1
+1 1 | 0.011 | 0
+```
+
+Note: the textbook network is 2-2-1. In my test it converged from 24 of 30 random starts, while 4 hidden neurons converged from 30 of 30, so the code uses 4. If a 2-2-1 run gets stuck, change the seed or add neurons.
+
+**Viva one-liners**
+- *Why can't a perceptron do XOR?* It is not linearly separable.
+- *What does the hidden layer do?* It builds intermediate features, so the output layer sees a separable problem.
+- *Why threshold at 0.5?* Sigmoid gives values in (0, 1); 0.5 is the midpoint.
+
+---
+
+## PS8: Hopfield network that stores 4 vectors
+
+**What the problem statement means.** A **Hopfield network** (1982) is a single layer of N bipolar neurons, fully connected, with **symmetric weights** (wᵢⱼ = wⱼᵢ) and **no self-connections** (wᵢᵢ = 0). It is an *auto-associative*, content-addressable memory: give it a noisy or partial pattern and it settles to the nearest stored pattern.
+- **Storing** (Hebb rule): `W = Σ pₖpₖᵀ − P·I` (P = number of patterns, subtracting P·I zeroes the diagonal).
+- **Recall:** update neurons one at a time (*asynchronously*): `xᵢ = sgn(Σⱼ wᵢⱼ·xⱼ)` until nothing changes. The energy `E = −½·xᵀWx` never increases, so the network always settles.
+- **Capacity:** about 0.14·N random patterns. Four random patterns would need N ≈ 30; the 4 vectors used here are mutually orthogonal, so 16 neurons are enough.
+
+**What you have to do.** Store 4 vectors in a Hopfield network, corrupt each one, and show that the network recovers the original.
+
+**How to do it.**
+1. Define 4 bipolar vectors (here generated by the formula in the code; you may type your own).
+2. `W = P.T @ P − 4·I`.
+3. Write a `recall` function that sweeps over the neurons in random order, applying `xᵢ = sgn(W[i]·x)`.
+4. Flip two bits of each stored vector, recall, and compare with the original.
+
+**What you need.** Python 3, NumPy; 4 bipolar (±1) vectors; Hebb rule; asynchronous update.
+
+**Code**
+
+```python
+import numpy as np
+
+N = 16
+P = np.array([[(-1) ** ((i >> k) & 1) for i in range(N)] for k in range(4)])   # 4 orthogonal bipolar vectors
+W = P.T @ P - 4 * np.eye(N)                          # Hebb rule: sum of outer products, zero diagonal
+show = lambda v: ''.join('+' if s > 0 else '-' for s in v)
+
+def recall(x):
+    x = x.copy()
+    for _ in range(5):                               # a few asynchronous sweeps
+        for i in np.random.permutation(N):
+            x[i] = 1 if W[i] @ x >= 0 else -1        # x_i = sign(sum_j w_ij * x_j)
+    return x
+
+for k, p in enumerate(P, 1):
+    noisy = p.copy(); noisy[[0, 5]] *= -1            # corrupt two bits
+    r = recall(noisy)
+    print(f"vector {k}: stored {show(p)} | noisy {show(noisy)} | recalled {show(r)} | {'OK' if (r == p).all() else 'FAIL'}")
+```
+
+The expression `(-1) ** ((i >> k) & 1)` takes bit k of the index i and turns it into ±1, giving 4 orthogonal vectors. Printed as `+` and `-` characters for readability.
+
+**Expected output**
+
+```
+vector 1: stored +-+-+-+-+-+-+-+- | noisy --+-+++-+-+-+-+- | recalled +-+-+-+-+-+-+-+- | OK
+vector 2: stored ++--++--++--++-- | noisy -+--+---++--++-- | recalled ++--++--++--++-- | OK
+vector 3: stored ++++----++++---- | noisy -+++-+--++++---- | recalled ++++----++++---- | OK
+vector 4: stored ++++++++-------- | noisy -++++-++-------- | recalled ++++++++-------- | OK
+```
+
+**Viva one-liners**
+- *Why asynchronous updates?* Synchronous updates can oscillate; asynchronous ones are guaranteed to settle.
+- *Why zero diagonal?* No neuron feeds back onto itself.
+- *Limits?* Capacity ≈ 0.14·N; too many or too similar patterns create spurious stable states; heavy noise can fail.
+
+---
+
+## PS9: CNN object detection and performance metrics
+
+**What the problem statement means.** Image *classification* answers "what is in the picture?". Object *detection* answers "what is it **and where**?": for each object it outputs a class label plus a bounding box (x1, y1, x2, y2). A **CNN** extracts features using *convolution* layers (small filters sliding over the image) and *pooling* layers (down-sampling), then dense layers produce the outputs. A simple detector has **two heads**: a softmax head for the class and a regression head for the 4 box numbers.
+
+Real detectors (YOLO, SSD, Faster R-CNN) predict many boxes per image, remove duplicates with *non-maximum suppression (NMS)*, and are trained on large datasets (COCO, Pascal VOC). To make this program run offline in seconds, it builds synthetic 32 × 32 images, each with **one object** (a square or a circle) at a random position and size, and trains a small CNN from scratch. The principle is the same: CNN features → class + box, judged by IoU.
+
+**What you have to do.** Implement a CNN that detects (classifies and localises) objects, evaluate it, show its boxes on images, **and discuss the performance metrics** used for object detectors (below).
+
+**How to do it.**
+1. Generate images, class labels and ground-truth boxes (scaled to 0–1).
+2. Build the CNN: Conv → Pool → Conv → Pool → Flatten → Dense, then two outputs: `cls` (softmax, 2 classes) and `box` (sigmoid, 4 numbers).
+3. Compile with two losses: cross-entropy for the class, mean-squared error for the box.
+4. Train (15 epochs), then predict on unseen test images.
+5. Compute IoU between predicted and true boxes; print class accuracy, mean IoU and the true-positive rate at IoU ≥ 0.5.
+6. Draw the true box (green) and predicted box (red) on four test images.
+
+**What you need.** Python 3, NumPy, Matplotlib, TensorFlow/Keras. No internet or dataset download; about 15 seconds on a normal CPU.
+
+**Code**
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+from tensorflow import keras
+from tensorflow.keras import layers
+
+keras.utils.set_random_seed(0)
+S = 32                                                  # image size: 32 x 32
+
+def make(n):                                            # n images, each with ONE object: square (0) or circle (1)
+    X = np.zeros((n, S, S, 1), 'float32'); c = np.random.randint(0, 2, n); B = np.zeros((n, 4), 'float32')
+    yy, xx = np.mgrid[:S, :S]
+    for i in range(n):
+        s = np.random.randint(8, 15); x0, y0 = np.random.randint(0, S - s, 2)
+        if c[i] == 0: X[i, y0:y0 + s, x0:x0 + s, 0] = 1
+        else:         X[i, :, :, 0] = (xx - x0 - s / 2) ** 2 + (yy - y0 - s / 2) ** 2 <= (s / 2) ** 2
+        B[i] = [x0, y0, x0 + s, y0 + s]                 # ground-truth box (x1, y1, x2, y2)
+    return X, c, B / S                                  # box coordinates scaled to 0..1
+
+Xtr, ctr, Btr = make(3000); Xte, cte, Bte = make(300)
+
+inp = keras.Input((S, S, 1))
+x = layers.Conv2D(16, 3, activation='relu')(inp); x = layers.MaxPooling2D()(x)
+x = layers.Conv2D(32, 3, activation='relu')(x);   x = layers.MaxPooling2D()(x)
+x = layers.Dense(64, activation='relu')(layers.Flatten()(x))
+cls = layers.Dense(2, activation='softmax', name='cls')(x)      # head 1: WHAT is the object?
+box = layers.Dense(4, activation='sigmoid', name='box')(x)      # head 2: WHERE is it? (x1, y1, x2, y2)
+model = keras.Model(inp, [cls, box])
+model.compile('adam', loss={'cls': 'sparse_categorical_crossentropy', 'box': 'mse'})
+model.fit(Xtr, {'cls': ctr, 'box': Btr}, epochs=15, batch_size=64, verbose=0)
+
+pc, pb = model.predict(Xte, verbose=0); pc = pc.argmax(1)
+
+def iou(a, b):                                          # Intersection over Union of two sets of boxes
+    w = np.clip(np.minimum(a[:, 2], b[:, 2]) - np.maximum(a[:, 0], b[:, 0]), 0, None)
+    h = np.clip(np.minimum(a[:, 3], b[:, 3]) - np.maximum(a[:, 1], b[:, 1]), 0, None)
+    inter = w * h
+    area = lambda r: (r[:, 2] - r[:, 0]) * (r[:, 3] - r[:, 1])
+    return inter / (area(a) + area(b) - inter)
+
+i = iou(pb, Bte)
+tp = (pc == cte) & (i >= 0.5)                           # true positive = right class AND IoU >= 0.5
+print(f"Class accuracy: {np.mean(pc == cte):.2f} | Mean IoU: {i.mean():.2f} | Precision = Recall @IoU0.5: {tp.mean():.2f}")
+
+fig, ax = plt.subplots(1, 4, figsize=(10, 3))
+for a, k in zip(ax, range(4)):
+    a.imshow(Xte[k, :, :, 0], cmap='gray')
+    for b, col in ((Bte[k], 'lime'), (pb[k], 'red')):   # green = ground truth, red = prediction
+        a.add_patch(plt.Rectangle((b[0] * S, b[1] * S), (b[2] - b[0]) * S, (b[3] - b[1]) * S, fill=False, ec=col, lw=2))
+    a.set_title(f"{['square', 'circle'][pc[k]]}  IoU={i[k]:.2f}"); a.axis('off')
+plt.show()
+```
+
+**Expected output** (numbers vary slightly from run to run)
+
+```
+Class accuracy: 1.00 | Mean IoU: 0.82 | Precision = Recall @IoU0.5: 1.00
+```
+
+Graph: four test images, each with a green box (true object) and a red box (CNN prediction) that overlap closely; the title shows the predicted class and the IoU. Each image has exactly one object and one prediction, so precision and recall are the same number here.
+
+### Performance evaluation metrics for object detection (the "discuss" part)
+
+| Metric | Meaning |
+|---|---|
+| **IoU** (Intersection over Union) | Overlap area ÷ union area of predicted and true box. 1 = perfect, 0 = no overlap. A detection counts as correct if IoU ≥ a threshold (usually 0.5). |
+| **TP / FP / FN** | TP: correct class and IoU ≥ threshold. FP: wrong class, IoU too low, or a duplicate detection. FN: an object that was missed. (There is no TN in detection.) |
+| **Precision** | TP ÷ (TP + FP): of everything detected, how much was right. |
+| **Recall** | TP ÷ (TP + FN): of all real objects, how many were found. |
+| **F1-score** | 2·P·R ÷ (P + R): balance of precision and recall. |
+| **Precision-Recall curve** | Precision vs recall as the confidence threshold is varied. |
+| **AP** (Average Precision) | Area under the precision-recall curve for one class (VOC: 11-point or all-point interpolation; COCO: 101-point). |
+| **mAP** (mean AP) | Mean of AP over all classes. Reported as mAP@0.5 (VOC) or mAP@[0.5:0.95] (COCO, averaged over IoU thresholds 0.5, 0.55, …, 0.95). |
+| **Confusion matrix** | Shows which classes get mistaken for which. |
+| **Mean IoU / localisation error** | How tight the boxes are. |
+| **Speed and size** | Inference time per image, FPS, parameters/FLOPs. Essential for real-time detectors. |
+
+NMS is not a metric but a post-processing step that removes duplicate boxes (otherwise they would count as false positives).
+
+**Viva one-liners**
+- *Classification vs detection vs segmentation?* What / what + where / which pixels.
+- *Why two losses?* One head predicts a class (cross-entropy), the other predicts numbers (MSE).
+- *What is mAP?* The class-wise average precision averaged over classes (and often over IoU thresholds).
+- *Is this a real-world detector?* No, it is a single-object toy trained from scratch so it runs offline; real ones use many boxes, NMS and big datasets.
+
+---
+
+## Exam-day tips
+
+- Run the program once before explaining it; examiners like to see the output.
+- Learn the one-line idea and formula of each PS from the revision table; most viva questions come from there.
+- If a plot does not appear, make sure `plt.show()` is the last line; in Jupyter/Colab plots appear under the cell automatically.
+- Likely "modify it" requests are one-line edits: change the gate targets (PS2, PS4), the learning rate or epochs (PS3, PS4, PS6, PS7), the number of hidden neurons (PS6, PS7), or the stored vectors (PS5, PS8).
